@@ -1,0 +1,69 @@
+#include <stdio.h>
+#include <mpi.h>
+
+
+void factorial_Calc(int id, int p, long arrayp[], int factorial){
+   MPI_Status status;
+  //Debo pasar cuantos proc y en cual id estoy para poder saber quien sigue en la lista, ademas lo que tenemos de base
+  //PASO 1: SABER DE DONDE VENGO Y ADONDE VOY
+  int sig_proc = id == p-1 ? id : id + 1; //si el proc es el ultimo de la lista, no hay siguiente , si no siguiente proc sera +1
+  int ant_proc = id == 0 ? 0 : id - 1; //Si el proc en el que estoy es 0, no hay anterior, de lo contrario es -1
+  printf("%d: Mi anterior fue %d, mi siguiente es %d. \n", id, ant_proc, sig_proc);
+  
+  
+  //PASO 2: SABER SI SOY EL NODO 0 (SOLO ENVIO)
+  if(id == 0){
+    long result = 1;
+    for(int i = 0; i<factorial;i++){
+      result = result*arrayp[i];
+//      printf("%d: valor i del for %d, valor del result %d, valor en array %d \n",id, i, result,arrayp[i]);
+    }
+     printf("%d: enviando data: %d, a %d \n",id, result, sig_proc);
+    MPI_Send(&result, 1, MPI_LONG, sig_proc,1,MPI_COMM_WORLD);
+  }
+  
+  //PASO 3: SABER SI SOY CUALQUIER OTRO NODO (ENVIO Y RECIBO A MENOS DE QUE SEA EL ULTIMO)
+  else{
+    long result_r;
+    long result_p = 1; // Inicializar en 1 para que al multiplicar no de 0
+    int i = (id*factorial); //Como no soy el 0, se debe encargar del indice correspondiente hasta el indice + trabajo
+    int trab = i + factorial;
+    for(i; i< trab ;i++){
+        result_p = result_p*arrayp[i]; //Los numeros propios
+        }
+      if(id == sig_proc){
+      //SOY EL ULTIMO SOLO RECIBO
+        MPI_Recv(&result_r,1,MPI_LONG,ant_proc,1,MPI_COMM_WORLD,&status);
+        printf("%d: data recibida: %d, de %d \n",id, result_r, ant_proc);
+        printf("%d: resultado p: %d \n",id, result_p); //RESULT P es la multiplicacion propia, RESULT R es la multiplicacion del propio con la recibida
+        result_p = result_p *result_r;
+        printf("%d: resultado es: %d \n",id, result_p);
+      
+      }
+      else{
+        //SOY OTRO ADEMAS DEL ULTIMO, RECIBO Y ENVIO
+        MPI_Recv(&result_r,1,MPI_LONG,ant_proc,1,MPI_COMM_WORLD,&status);
+        printf("%d: data recibida: %d, de %d \n",id, result_r, ant_proc);
+        printf("%d: resultado p: %d \n",id, result_p);
+        result_p = result_p *result_r;
+        printf("%d: enviando data: %d, a %d \n",id, result_p, sig_proc);
+        MPI_Send(&result_p, 1, MPI_LONG, sig_proc,1,MPI_COMM_WORLD);
+      
+      }
+  }
+}
+  
+int main(int argc, char** argv){
+ long arrayp[]={1,2,3,4,5,6,7,8,9,10,11,12};
+ int carga = 4; //CADA NODO SE ENCARGA DE X TRABAJO
+ int id, p;
+ 
+ MPI_Init(&argc, &argv); // Inicializar MPI
+ MPI_Comm_size ( MPI_COMM_WORLD, &p ); // Saber con cuantos Proc trabajo
+ MPI_Comm_rank ( MPI_COMM_WORLD, &id ); // Saber en cual proc estoy trabajando
+ printf("%d: Hello (p=%d)\n", id,p);  //Tener vision en el output
+ factorial_Calc(id, p, arrayp, carga);
+ MPI_Finalize();  //Finalizar mpi
+  return 0;
+ }
+ 

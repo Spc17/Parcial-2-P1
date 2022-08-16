@@ -1,0 +1,38 @@
+#include <mpi.h>
+#include <stdio.h>
+
+int main(int argc, char *argv[]){
+	int rank, size;
+		MPI_Init(&argc, &argv);
+			MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+				MPI_Comm_size(MPI_COMM_WORLD, &size);
+					
+						int array[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+							int factorial = 1;
+								int factorial2;
+								
+									int i;
+									
+										if (rank == 0) {
+												for(i=0;i<5;i++){
+															factorial *= array[i];
+																	}
+																			
+																					MPI_Recv(&factorial2, 1, MPI_INT, 1, 0, MPI_COMM_WORLD, NULL);
+																						}
+																							else if (rank == 1) {
+																									for(i=5;i<10;i++){
+																												factorial *= array[i];
+																														}
+																																
+																																		MPI_Send(&factorial, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
+																																			}
+																																			
+																																				if (rank == 0){
+																																						factorial *= factorial2;
+																																								printf("10! is %d.\n", factorial);
+																																									}
+																																										
+																																											MPI_Finalize();
+																																												return 0;
+																																												}
